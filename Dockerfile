@@ -1,25 +1,25 @@
 FROM python:3.11-slim
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git ffmpeg && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /app
+# Set up user
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
+WORKDIR $HOME/app
 
-# Copy requirements
-COPY requirements.txt .
+# Clone the repo and fix the dependency conflict
+RUN git clone https://github.com/Doctorstra/Video-Editor-Bot-V22.git .
+RUN sed -i 's/requests==2.31.0/requests>=2.32.2/g' requirements.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python packages
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
+RUN pip install fastapi uvicorn
 
-# Copy application code
-COPY . .
+# Create the dummy web server
+RUN echo 'from fastapi import FastAPI\napp = FastAPI()\n@app.get("/")\ndef read_root():\n    return {"status": "Telegram Bot is running"}' > dummy_server.py
 
-# Create necessary directories
-RUN mkdir -p downloads uploads logs
-
-# Run the bot
-CMD ["python", "bot.py"]
+# Start both the bot and the web server
+CMD ["sh", "-c", "python bot.py & uvicorn dummy_server:app --host 0.0.0.0 --port 7860"]
