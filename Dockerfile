@@ -32,9 +32,11 @@ RUN sed -i 's/requests==2.31.0/requests>=2.32.2/g' requirements.txt
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 RUN pip install fastapi uvicorn
 
-# Create the dummy web server to pass Render's health check
-RUN echo 'from fastapi import FastAPI\napp = FastAPI()\n@app.get("/")\ndef read_root():\n    return {"status": "Telegram Bot is running"}' > dummy_server.py
+# FIX 1: Force the Telegram library to use the Local API Server instead of the public cloud
+RUN find /home/user/.local/lib/python3.11/site-packages/telegram -type f -name "*.py" -exec sed -i 's|https://api.telegram.org|http://127.0.0.1:8081|g' {} +
+
+# FIX 2: Use printf instead of echo to prevent Alpine Linux from breaking the Python syntax
+RUN printf 'from fastapi import FastAPI\napp = FastAPI()\n@app.get("/")\ndef read_root():\n    return {"status": "Telegram Bot is running"}\n' > dummy_server.py
 
 # Start the Local API Server, the dummy web server, and the Telegram bot all at once
-# It uses the API_ID and API_HASH variables you already saved in Render
 CMD ["sh", "-c", "telegram-bot-api --local --api-id=${API_ID} --api-hash=${API_HASH} & uvicorn dummy_server:app --host 0.0.0.0 --port 7860 & sleep 5 && python bot.py"]
