@@ -39,4 +39,4 @@ RUN find /home/user/.local/lib/python3.11/site-packages/telegram -type f -name "
 RUN printf 'from fastapi import FastAPI\napp = FastAPI()\n@app.get("/")\ndef read_root():\n    return {"status": "Telegram Bot is running"}\n' > dummy_server.py
 
 # Start the Local API Server, the dummy web server, and the Telegram bot all at once
-CMD ["sh", "-c", "telegram-bot-api --local --api-id=${API_ID} --api-hash=${API_HASH} & uvicorn dummy_server:app --host 0.0.0.0 --port 7860 & sleep 5 && python bot.py"]
+CMD ["sh", "-c", "telegram-bot-api --local --api-id=${API_ID} --api-hash=${API_HASH} --http-port 8081 & uvicorn dummy_server:app --host 0.0.0.0 --port 7860 & sleep 5 && python bot.py"]
